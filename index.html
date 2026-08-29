@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四哥 · 言语智能助教</title>
+<style>
+  :root{
+    --pink-50:#fdf2f7; --pink-100:#ffe4ee; --pink-200:#ffc9dd; --pink-300:#ffa8c6;
+    --pink-400:#ff8fb0; --pink-500:#f472a0; --pink-600:#e14d84; --pink-700:#c23666;
+    --ink:#5b3b48; --ink-soft:#9a7a86; --white:#ffffff; --line:#ffe0ec;
+    --shadow:0 6px 24px rgba(225,77,132,.10);
+    --radius:16px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Microsoft YaHei","PingFang SC","Hiragino Sans GB",system-ui,sans-serif;
+    background:linear-gradient(160deg,#fff7fb 0%, #ffe4ee 100%);
+    color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:12px;
+  }
+  /* ============ 主容器 ============ */
+  .app{
+    width:min(1180px,100%); height:min(860px,96vh);
+    display:flex; background:var(--white); border-radius:22px;
+    box-shadow:var(--shadow); overflow:hidden; position:relative;
+  }
+  /* ============ 侧边功能导航栏 ============ */
+  .sidebar{
+    width:196px; flex:0 0 196px; background:linear-gradient(180deg,#ffe9f2,#ffd8e8);
+    border-right:1px solid var(--line); display:flex; flex-direction:column; padding:18px 12px 14px;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; padding:4px 6px 16px; }
+  .brand-logo{ width:38px; height:38px; border-radius:12px; background:var(--pink-500); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; box-shadow:0 4px 10px rgba(244,114,160,.4); }
+  .brand-name{ font-weight:700; font-size:16px; letter-spacing:1px; }
+  .brand-sub{ font-size:11px; color:var(--ink-soft); margin-top:1px;}
+  .nav-title{ font-size:11px; color:var(--ink-soft); padding:6px 8px 4px; letter-spacing:2px;}
+  .nav{
+    flex:1; display:flex; flex-direction:column; gap:6px; overflow-y:auto; padding:4px 0;
+  }
+  .nav::-webkit-scrollbar{width:4px} .nav::-webkit-scrollbar-thumb{background:var(--pink-200);border-radius:4px}
+  .nav-btn{
+    display:flex; align-items:center; gap:10px; padding:11px 12px; border:none; cursor:pointer;
+    background:transparent; border-radius:12px; color:var(--ink); font-size:13.5px; text-align:left;
+    transition:all .18s ease; font-family:inherit;
+  }
+  .nav-btn:hover{ background:#fff; box-shadow:0 2px 8px rgba(225,77,132,.12); transform:translateX(2px);}
+  .nav-btn.active{ background:var(--pink-500); color:#fff; box-shadow:0 4px 12px rgba(244,114,160,.4);}
+  .nav-btn .ico{ font-size:17px; width:22px; text-align:center; flex:0 0 auto;}
+  .nav-btn .lbl{ flex:1;}
+  .nav-btn .badge{ font-size:10px; background:#fff; color:var(--pink-600); padding:1px 7px; border-radius:20px; font-weight:700;}
+  .nav-btn.active .badge{ background:#fff; color:var(--pink-600);}
+  .sidebar-foot{ font-size:10.5px; color:var(--ink-soft); text-align:center; padding-top:8px; border-top:1px dashed var(--pink-200);}
+  /* ============ 主聊天区 ============ */
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; background:#fffafc;}
+  .header{
+    display:flex; align-items:center; gap:14px; padding:14px 22px;
+    border-bottom:1px solid var(--line); background:#fff;
+  }
+  .avatar{ width:52px; height:52px; border-radius:50%; overflow:hidden; box-shadow:0 4px 14px rgba(225,77,132,.25);
+    background:radial-gradient(circle at 30% 30%, #ffe6f0, #ffd0e2); flex:0 0 auto; border:2px solid #fff;}
+  .avatar svg{ width:100%; height:100%; display:block;}
+  .header-title{ font-size:20px; font-weight:800; letter-spacing:2px; color:var(--pink-700);}
+  .header-status{ font-size:12px; color:var(--ink-soft); margin-top:3px; display:flex; align-items:center; gap:6px;}
+  .dot{ width:8px; height:8px; border-radius:50%; background:#34d399; box-shadow:0 0 0 3px rgba(52,211,153,.2);}
+  .header-right{ margin-left:auto; display:flex; gap:8px; align-items:center;}
+  .mode-tag{ font-size:11px; padding:4px 10px; border-radius:20px; background:var(--pink-100); color:var(--pink-700); font-weight:600;}
+  .mode-tag.off{ background:#f1f1f4; color:#8a8a93;}
+  .btn-mini{border:none;cursor:pointer;font-family:inherit;background:var(--pink-100);color:var(--pink-700);font-size:12px;padding:6px 12px;border-radius:20px;transition:.15s}
+  .btn-mini:hover{background:var(--pink-200)}
+  /* 聊天消息 */
+  .chat{ flex:1; overflow-y:auto; padding:22px 22px 8px; scroll-behavior:smooth;}
+  .chat::-webkit-scrollbar{width:6px} .chat::-webkit-scrollbar-thumb{background:var(--pink-200);border-radius:6px}
+  .msg{ display:flex; gap:10px; margin-bottom:18px; animation:pop .25s ease;}
+  @keyframes pop{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+  .msg .avatar-mini{ width:34px; height:34px; border-radius:50%; overflow:hidden; flex:0 0 auto; background:radial-gradient(circle at 30% 30%,#ffe6f0,#ffd0e2);}
+  .msg .avatar-mini svg{width:100%;height:100%;display:block}
+  .bubble{ max-width:78%; padding:12px 15px; border-radius:16px; line-height:1.75; font-size:14px; white-space:pre-wrap; word-break:break-word;}
+  .msg.user{ flex-direction:row-reverse;}
+  .msg.user .bubble{ background:linear-gradient(135deg,var(--pink-500),var(--pink-400)); color:#fff; border-top-right-radius:4px;}
+  .msg.assistant .bubble{ background:#fff; border:1px solid var(--line); border-top-left-radius:4px; box-shadow:0 2px 8px rgba(225,77,132,.06);}
+  .msg .bubble img{ max-width:240px; border-radius:10px; display:block; margin-top:4px;}
+  .msg .tag{ font-size:11px; color:var(--ink-soft); margin-top:6px; display:flex; gap:6px; align-items:center;}
+  .msg.assistant .tag{ justify-content:flex-end;}
+  .typing-dots{ display:inline-flex; gap:4px; padding:6px 2px;}
+  .typing-dots span{ width:7px;height:7px;border-radius:50%;background:var(--pink-400);animation:blink 1s infinite;}
+  .typing-dots span:nth-child(2){animation-delay:.2s} .typing-dots span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.25;transform:translateY(0)} 40%{opacity:1;transform:translateY(-3px)}}
+  .opt-row{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .opt-chip{ border:1.5px solid var(--pink-300); background:#fff; color:var(--pink-700); border-radius:20px;
+    padding:6px 16px; font-size:13px; cursor:pointer; font-family:inherit; transition:.15s;}
+  .opt-chip:hover{ background:var(--pink-500); color:#fff; border-color:var(--pink-500);}
+  /* 输入区 */
+  .inputbar{ padding:12px 18px 16px; border-top:1px solid var(--line); background:#fff;}
+  .input-actions{ display:flex; gap:8px; margin-bottom:8px;}
+  .ia-btn{ border:1px solid var(--line); background:var(--pink-50); color:var(--pink-700); border-radius:20px;
+    padding:6px 14px; font-size:12.5px; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:6px; transition:.15s;}
+  .ia-btn:hover{ background:var(--pink-100);}
+  .ia-btn.recording{ background:#f43f5e; color:#fff; border-color:#f43f5e; animation:pulse 1.2s infinite;}
+  @keyframes pulse{ 0%,100%{box-shadow:0 0 0 0 rgba(244,63,94,.35);} 50%{box-shadow:0 0 0 6px rgba(244,63,94,0);} }
+  .input-row{ display:flex; gap:10px; align-items:flex-end;}
+  .input-row textarea{
+    flex:1; resize:none; border:1.5px solid var(--line); border-radius:16px; padding:11px 14px;
+    font-size:14px; font-family:inherit; color:var(--ink); background:#fff; min-height:48px; max-height:140px; outline:none;
+    transition:border .15s;
+  }
+  .input-row textarea:focus{ border-color:var(--pink-400); box-shadow:0 0 0 3px rgba(244,114,160,.12);}
+  .send-btn{ border:none; width:50px; height:50px; border-radius:16px; cursor:pointer; flex:0 0 auto;
+    background:linear-gradient(135deg,var(--pink-500),var(--pink-400)); color:#fff; font-size:20px;
+    box-shadow:0 4px 12px rgba(244,114,160,.4); transition:.15s;}
+  .send-btn:hover{ transform:translateY(-2px); box-shadow:0 6px 16px rgba(244,114,160,.5);}
+  .ocr-hint{ font-size:11.5px; color:var(--ink-soft); padding:2px 4px 6px;}
+  .ocr-hint b{ color:var(--pink-600);}
+  /* ============ 弹层 ============ */
+  .overlay{ position:absolute; inset:0; background:rgba(91,59,72,.28); backdrop-filter:blur(2px);
+    display:none; align-items:center; justify-content:center; z-index:20; animation:fade .2s ease;}
+  .overlay.show{ display:flex;}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal{ width:min(620px,92%); max-height:82%; background:#fff; border-radius:20px; box-shadow:0 20px 60px rgba(91,59,72,.25);
+    display:flex; flex-direction:column; overflow:hidden; animation:up .25s ease;}
+  @keyframes up{ from{opacity:0; transform:translateY(20px) scale(.98);} to{opacity:1; transform:none;} }
+  .modal-head{ padding:16px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px;}
+  .modal-head h3{ font-size:16px; flex:1; color:var(--pink-700);}
+  .modal-close{ border:none; background:var(--pink-100); color:var(--pink-700); width:30px; height:30px; border-radius:10px; cursor:pointer; font-size:15px;}
+  .modal-body{ padding:16px 20px; overflow-y:auto; font-size:13.5px; line-height:1.8; color:var(--ink);}
+  .modal-body::-webkit-scrollbar{width:5px} .modal-body::-webkit-scrollbar-thumb{background:var(--pink-200);border-radius:5px}
+  .form-item{ margin-bottom:14px;}
+  .form-item label{ display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:600;}
+  .form-item input[type=text], .form-item input[type=password]{
+    width:100%; border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; font-size:13.5px; font-family:inherit; outline:none;}
+  .form-item input:focus{ border-color:var(--pink-400);}
+  .switch-row{ display:flex; align-items:center; justify-content:space-between; padding:8px 0;}
+  .switch{ position:relative; width:44px; height:24px; flex:0 0 auto;}
+  .switch input{ opacity:0; width:0; height:0;}
+  .slider{ position:absolute; inset:0; background:#e5e1e6; border-radius:24px; cursor:pointer; transition:.2s;}
+  .slider:before{ content:""; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; left:3px; top:3px; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .switch input:checked + .slider{ background:var(--pink-500);}
+  .switch input:checked + .slider:before{ transform:translateX(20px);}
+  .cheat{ background:var(--pink-50); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:12px;}
+  .cheat h4{ color:var(--pink-700); font-size:14px; margin-bottom:8px;}
+  .cheat p{ font-size:13px; margin-bottom:6px;}
+  .cheat .k{ color:var(--pink-600); font-weight:700;}
+  .mem-item{ border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin-bottom:8px; background:#fffafc;}
+  .mem-item .who{ font-size:12px; font-weight:700; color:var(--pink-700); margin-bottom:4px;}
+  .mem-item .txt{ font-size:12.5px; color:var(--ink); max-height:60px; overflow:hidden;}
+  .mem-stat{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+  .mem-stat div{ flex:1; min-width:100px; background:var(--pink-50); border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center;}
+  .mem-stat b{ display:block; font-size:18px; color:var(--pink-700);}
+  .mem-stat span{ font-size:11px; color:var(--ink-soft);}
+  .test-result{ margin-top:12px; border-radius:14px; padding:12px 16px; font-weight:700;}
+  .test-result.pass{ background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;}
+  .test-result.fail{ background:#fef2f2; color:#dc2626; border:1px solid #fecaca;}
+  .test-check{ font-size:12.5px; padding:4px 0;}
+  .btn-primary{ background:var(--pink-500); color:#fff; border:none; border-radius:12px; padding:10px 18px; cursor:pointer; font-family:inherit; font-size:13.5px; font-weight:600;}
+  .btn-primary:hover{ background:var(--pink-600);}
+  .btn-ghost{ background:transparent; color:var(--pink-600); border:1.5px solid var(--pink-300); border-radius:12px; padding:10px 18px; cursor:pointer; font-family:inherit; font-size:13.5px;}
+  .hint{ font-size:11.5px; color:var(--ink-soft); margin-top:6px; line-height:1.6;}
+  .divider{ height:1px; background:var(--line); margin:12px 0;}
+  .rec-note{ font-size:12px; color:#f43f5e; font-weight:700; display:none;}
+  .rec-note.show{ display:block;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ======= 侧边功能导航栏 ======= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">四</div>
+      <div>
+        <div class="brand-name">四哥 · 言语</div>
+        <div class="brand-sub">行测言语智能助教</div>
+      </div>
+    </div>
+    <div class="nav-title">功能导航</div>
+    <nav class="nav">
+      <button class="nav-btn" id="navPhoto" title="用手机相机或上传图片识别题目">
+        <span class="ico">📷</span><span class="lbl">拍照传题</span><span class="badge">OCR</span>
+      </button>
+      <button class="nav-btn" id="navVoice" title="按住说话，自动转文字">
+        <span class="ico">🎤</span><span class="lbl">语音输入</span><span class="badge">识别</span>
+      </button>
+      <button class="nav-btn" id="navText" title="粘贴题干和选项一起发我">
+        <span class="ico">✍️</span><span class="lbl">文字传题</span>
+      </button>
+      <button class="nav-btn" id="navQuiz" title="从四哥题库里随机抽一道真题练手">
+        <span class="ico">🎲</span><span class="lbl">随机出题</span>
+      </button>
+      <button class="nav-btn" id="navMethod" title="三步走 / 三把钥匙 / 七大文段速查">
+        <span class="ico">📖</span><span class="lbl">方法答疑</span>
+      </button>
+      <button class="nav-btn" id="navMemory" title="查看四哥记住了你哪些信息">
+        <span class="ico">🧠</span><span class="lbl">记忆记录</span>
+      </button>
+      <button class="nav-btn" id="navTest" title="模拟对话，验证记忆是否真的生效">
+        <span class="ico">🧪</span><span class="lbl">记忆自检</span>
+      </button>
+      <button class="nav-btn" id="navApi" title="可选接入大模型 API，对话更智能">
+        <span class="ico">⚙️</span><span class="lbl">API 设置</span>
+      </button>
+      <button class="nav-btn" id="navClear" title="删除我记住的所有对话记录">
+        <span class="ico">🧹</span><span class="lbl">清空记忆</span>
+      </button>
+    </nav>
+    <div class="sidebar-foot">四哥 · 陪你平静地重复</div>
+  </aside>
+
+  <!-- ======= 主聊天区 ======= -->
+  <main class="main">
+    <header class="header">
+      <div class="avatar" id="avatarBox">
+        <svg viewBox="0 0 120 120" aria-label="四哥头像">
+          <defs>
+            <radialGradient id="bgA" cx="30%" cy="30%"><stop offset="0%" stop-color="#ffe6f0"/><stop offset="100%" stop-color="#ffd0e2"/></radialGradient>
+          </defs>
+          <rect width="120" height="120" fill="url(#bgA)"/>
+          <circle cx="60" cy="52" r="33" fill="#ffe3b3" stroke="#e6b98a" stroke-width="1"/>
+          <path d="M28 42 Q30 18 60 16 Q90 18 92 42 Q88 30 60 30 Q32 30 28 42 Z" fill="#3a2a33"/>
+          <path d="M27 40 q2 -10 9 -14" stroke="#3a2a33" stroke-width="7" fill="none" stroke-linecap="round"/>
+          <path d="M93 40 q-2 -10 -9 -14" stroke="#3a2a33" stroke-width="7" fill="none" stroke-linecap="round"/>
+          <path d="M33 50 h-5 M87 50 h5" stroke="#2f2a33" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="49" cy="51" r="9.5" fill="none" stroke="#2f2a33" stroke-width="2.6"/>
+          <circle cx="73" cy="51" r="9.5" fill="none" stroke="#2f2a33" stroke-width="2.6"/>
+          <path d="M58.5 51 h5" stroke="#2f2a33" stroke-width="2.6"/>
+          <circle cx="49" cy="51" r="2.6" fill="#2f2a33"/>
+          <circle cx="73" cy="51" r="2.6" fill="#2f2a33"/>
+          <circle cx="40" cy="61" r="3.4" fill="#ff9db5" opacity=".55"/>
+          <circle cx="82" cy="61" r="3.4" fill="#ff9db5" opacity=".55"/>
+          <path d="M52 60 q8 8 16 0" stroke="#c25b3c" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+          <circle cx="60" cy="72" r="2" fill="#e8a07a"/>
+          <path d="M38 88 q22 13 44 0 l4 20 q-26 6 -52 0 Z" fill="#f472a0"/>
+          <path d="M38 88 q22 13 44 0" fill="none" stroke="#e14d84" stroke-width="1.5"/>
+          <path d="M62 98 l6 8 M62 100 q3 2 6 0" fill="none" stroke="#d99ac7" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="header-title">同学们好</div>
+      </div>
+      <div class="header-right">
+        <span class="mode-tag" id="modeTag">离线引擎</span>
+        <button class="btn-mini" id="btnQuizTop">🎲 随机出题</button>
+        <button class="btn-mini" id="btnMethodTop">📖 方法速查</button>
+      </div>
+    </header>
+
+    <div class="chat" id="chat"></div>
+
+    <div class="inputbar">
+      <div class="ocr-hint" id="ocrHint"></div>
+      <div class="rec-note" id="recNote">🎙 正在录音，正在识别……</div>
+      <div class="input-actions">
+        <button class="ia-btn" id="btnCamera">📷 拍照传题</button>
+        <button class="ia-btn" id="btnMic">🎤 语音输入</button>
+        <button class="ia-btn" id="btnQuiz">🎲 随机出题</button>
+        <button class="ia-btn" id="btnTextFocus">✍️ 文字传题</button>
+      </div>
+      <div class="input-row">
+        <textarea id="input" rows="1" placeholder="把题目（题干+选项）直接发我，或点上面按钮传题……（Ctrl+Enter 发送）"></textarea>
+        <button class="send-btn" id="btnSend" title="发送">➤</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ======= 弹层：方法答疑 ======= -->
+  <div class="overlay" id="ovMethod">
+    <div class="modal">
+      <div class="modal-head"><h3>📖 四哥方法速查</h3><button class="modal-close" data-close="ovMethod">✕</button></div>
+      <div class="modal-body" id="methodBody"></div>
+    </div>
+  </div>
+
+  <!-- ======= 弹层：记忆记录 ======= -->
+  <div class="overlay" id="ovMemory">
+    <div class="modal">
+      <div class="modal-head"><h3>🧠 记忆记录</h3><button class="modal-close" data-close="ovMemory">✕</button></div>
+      <div class="modal-body" id="memoryBody"></div>
+    </div>
+  </div>
+
+  <!-- ======= 弹层：记忆自检 ======= -->
+  <div class="overlay" id="ovTest">
+    <div class="modal">
+      <div class="modal-head"><h3>🧪 记忆自检（模拟对话验证）</h3><button class="modal-close" data-close="ovTest">✕</button></div>
+      <div class="modal-body" id="testBody"></div>
+    </div>
+  </div>
+
+  <!-- ======= 弹层：API 设置 ======= -->
+  <div class="overlay" id="ovApi">
+    <div class="modal">
+      <div class="modal-head"><h3>⚙️ API 设置</h3><button class="modal-close" data-close="ovApi">✕</button></div>
+      <div class="modal-body" id="apiBody"></div>
+    </div>
+  </div>
+
+  <!-- ======= 隐藏的文件输入（拍照/选图） ======= -->
+  <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+
+</div>
+
+<script>
+/* =========================================================
+ * 四哥智能体 · 核心引擎（sige_core.js）
+ * 浏览器与 Node 共用。浏览器挂载到 window.SigeCore，Node 用 module.exports。
+ * ========================================================= */
+(function (root, factory) {
+  if (typeof module !== 'undefined' && module.exports) { module.exports = factory(); }
+  else { root.SigeCore = factory(); }
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  /* ---------------- 一、人物档案（四哥系统提示词核心） ---------------- */
+  var SIGE_PERSONA = [
+    "你是「四哥」，本名四诗风雅颂，超格教育的一名行测言语理解讲师。学生都叫你四哥。你教中心理解（片段阅读）、逻辑填空、标题/细节/排序/接语/语句填空/词句理解/篇章阅读等小题型。",
+    "【身份与底色】你是一个温和的过来人，不是炫技的老师。你笃信『无为而治』：有所不为，而后才可有为——顺应规律，放平心态，做好当下事，不在意结果。你说学习的本质是『平静地重复』。你理解学生的焦虑：低头是题海，抬头是迷茫。你常劝慰：『请相信努力从来不会白费，今日撒下的种子，正在你看不见的地方悄悄生根发芽。慢慢走，不着急。』",
+    "【价值观】1.方法优先于技巧，理解优先于背诵——言语的本质就是理解，你中有我我中有你；不要硬套知识点。2.接受选项不完美，对比择优，不追求完美表述。3.命题人思维：读不懂文段就站在命题人角度，想他会如何设正确项、如何埋三个错误项。4.逻辑填空靠积累+就近原则。5.长期主义与平常心，不让学生只盯准确率。",
+    "【中心理解三步走】1.锁定核心观点：通读文段，梳理行文脉络（划句子成分：背景/问题/目的/对策/重要性/意义/举例子/解释说明/下定义/引出话题），通过对策、重要性、问题、设问、对比、总结词提炼观点。2.放大选项差异：只一项提到核心观点就直接核对锁定；多项都提到就找选项差异点放回原文比对（治二选一纠结）。3.选项倒推文段：纠结时遮住文段只看选项，问自己能否凭选项猜出文章核心，猜得出才可能对。",
+    "【关联词辅助】转折之后是重点；并列要留都留要扔都扔、提取共性；递进之后是重点；因果结论重于原因。关联词仅辅助，考试在弱化。",
+    "【七大文段类型·复盘用不硬套】对策类（最高频，对策>目的/问题/意义，对策内容>表述形式；单一对策直接选；递进对策取递进后；综合并列对策有共性提共性、无共性目光前移）；重要性文段（直接性×是基础/关键/离不开，间接性×有利于，最高级第一性；众多意义锁定最终意义，可针对性提对策）；反向对策（做法+危害反推正向）；问题类（有对策对策重点，无对策则概括问题或提针对性对策）；对比类（古今/中外/好坏/主体对比突出其一，区分并列）；设问类（设问+回答=作者观点）；原因类（结论>原因，优选因+果>果>因）；补充类（概括/关键词/观点例证/反驳）。",
+    "【错误选项五大规律】1.扩大/缩小话题范围；2.内容出自非重点；3.表述片面；4.无中生有；5.主体可省略（唯一匹配核心话题即当选）。",
+    "【逻辑填空三把钥匙】看搭配、找逻辑、做辨析。有词找词（关联词），没词看句（就近原则：离空最近的句子解释概率最大）。五大逻辑：相反（转折/对照/变化词）、并列（相近≠相同，并列+整体分析）、推出（因果/条件/问题-对策）、递进（后文加重）、形象化表达（修辞/引号）。辨析三级：辨侧重、辨色彩、辨轻重；四个选项都读得通时谁有逻辑对应点谁更好。口诀『0·1·10』：0→1培育/催生/开创/形塑，1→10优化/完善/增加，1→1重构/调整（之前有，整容了）。",
+    "【小题型】标题题=中心理解找核心+美观+贴原文；细节题=选项与原文一一对应（找对不对/找有没有/找对象），五大坑：无中生有、偷换概念、偷换时态、偷换语气、偷换逻辑；排序题=没有哪个句子一定适合做首句，与其他句子相比确定（首句排除+破题点+验证）；接语题=盯住尾句核心话题（对策接做法，问题接原因-解决）；语句填空=段首总起、段尾呼应、段中承上启下（本质当中心理解做）；词句理解=定位+就近（指代词/标点/解释词），就近解不了再通观；篇章阅读=『不难，但很乱』，先读设问再看文段，读一段匹配一次选项。",
+    "【语言风格】慢、稳、讲道理，用大白话翻译文段，善用生活比喻（大头儿子小头爸爸原理讲宏观与具体；『之前有，整容了』讲重构；自家小狗皮蛋讲并列）。常挂嘴边：本题答题逻辑/思路梳理/破题点/圈画/复盘/优先/直接排除/重点。讲题标数据：这题正确率X%，易错项是Y。称呼学生：同学们、小伙伴们。",
+    "【情绪应对】纠结二选一→放大选项差异放回原文比对；读不懂→命题人思维+选项倒推；焦虑准确率低→平常心，别盯准确率，思多乱其志实干出真知；逻辑填空不认识词→很正常不要心慌，带着你找线索，以理解为主，注重积累；要求完美答案→接受选项不完美。",
+    "【每次解析格式】①判定题型与考点；②梳理行文脉络/找破题点；③逐项分析四个选项对为什么对、错为什么错（贴标签：非重点/无中生有/片面/偷换概念/绝对化/扩大缩小范围）；④用四哥话术总结；⑤最后必以一句励志小短句收尾。",
+    "【绝不】不吹嘘不保证上岸，不骂学生，不硬套知识点，不放弃任何一个读不懂的学生。"
+  ].join('\n');
+
+  /* ---------------- 二、励志短句库 ---------------- */
+  var MOTIVATIONS = [
+    '请相信努力从来不会白费，今日撒下的种子，正在你看不见的地方悄悄生根发芽。',
+    '慢慢走，不着急，走得更稳、走的更远、走的更有力量。',
+    '思多乱其志，实干出真知；行到水穷处，坐看云起时。',
+    '学习就是平静地重复，不可一日懈怠，也不可过于用力。',
+    '进步不是线性的，反复挣扎、反复总结、再学习，这就是进步。',
+    '坚持长期主义，藐视一切暂时的困难。最后的胜利一定属于你们。',
+    '别因一时得意而骄傲自满，亦不因一时失意而自坠其志。',
+    '今日低头是题海，他日抬头是上岸。',
+    '接受选项的不完美，也接受自己的不完美，对比择优，稳步上岸。',
+    '把每一次复盘当成播种，上岸只是时间问题。'
+  ];
+  function pickMotivation(seed) {
+    if (seed && typeof seed === 'number') return MOTIVATIONS[seed % MOTIVATIONS.length];
+    return MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
+  }
+
+  /* ---------------- 三、关键词表（宁缺毋滥，避免单字误报） ---------------- */
+  var KW = {
+    zhuanzhe: ['但是', '然而', '却', '可是', '不过', '事实上', '实际上', '其实', '只是', '反倒', '殊不知'],
+    yinguo: ['因此', '所以', '故而', '于是', '可见', '总之', '看来', '因为', '由于', '导致', '造成', '以致', '正因如此', '究其原因'],
+    dijin: ['甚至', '尤其', '进而', '特别是', '更何况', '更重要的是', '更重要的', '更充分', '越发', '以至于'],
+    duice: ['应该', '应当', '需要', '必须', '亟需', '亟待', '务必', '才能', '要加大', '要加强', '要落实', '要推动', '要引导', '要建立', '要形成', '应当建立', '应当形成'],
+    binglie: ['同时', '此外', '另外', '以及', '一方面', '另一方面', '不仅', '而且', '不仅...还', '既...又'],
+    shewen: ['为什么', '如何', '是否', '能否', '谁', '吗'],
+    zongjie: ['综上', '由此可见', '总而言之', '一言以蔽之', '可见', '总之'],
+    xiangfan: ['不是', '而是', '少一些', '多一些', '相较于', '相比于', '从', '到', '走向', '变为', '变得'],
+    jieshi: ['无异于', '也就是', '就像是', '换言之', '即', '意思是说', '指的是', '正是'],
+    error_abs: ['全部', '所有', '一切', '必然', '绝对', '唯一', '必定', '彻底', '完全'],
+    error_vague: ['某种', '一些', '部分', '可能', '或许', '大致', '一般', '有关']
+  };
+
+  /* ---------------- 四、题型识别 ---------------- */
+  var TYPE_RULES = [
+    [/排序|语序|重排/, '排序题'],
+    [/接下来|接续|下文|紧接着/, '接语题'],
+    [/填入画横线|填入横线|横线部分|填在.*空/, '语句填空题'],
+    [/与原文|细节判断|相符|不符合|与文段|正确的一项|不正确的是/, '细节判断题'],
+    [/划线|指代|词句理解|这句话.*理解|某个词/, '词句理解题'],
+    [/标题|题目是/, '标题添加题'],
+    [/依次填入|填入.*最恰当|最恰当.*项|____|横线处/, '逻辑填空题'],
+    [/篇章阅读|全文.*理解|根据上述文章/, '篇章阅读题'],
+    [/意在说明|意在强调|主旨|概括|主要说明|主要介绍|重在强调|核心|主要讲了|这段文字|这段话|这段材料|文段/, '中心理解题']
+  ];
+  function detectQuestionType(text) {
+    var t = text || '';
+    for (var i = 0; i < TYPE_RULES.length; i++) {
+      if (TYPE_RULES[i][0].test(t)) return TYPE_RULES[i][1];
+    }
+    return '中心理解题';
+  }
+
+  /* ---------------- 五、题干解析（提取选项） ---------------- */
+  var LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
+  function parseOptions(text) {
+    var found = [];
+    LABELS.forEach(function (lb) {
+      var re = new RegExp('(?:^|[^A-Za-z])' + lb + '[\\.、:：)]', 'g');
+      var m = re.exec(text);
+      if (m) found.push({ lb: lb, contentStart: m.index + m[0].length, labelStart: m.index });
+    });
+    var opts = { A: '', B: '', C: '', D: '', E: '', F: '' };
+    if (found.length >= 2) {
+      for (var i = 0; i < found.length; i++) {
+        var start = found[i].contentStart;
+        var end = (i + 1 < found.length) ? found[i + 1].labelStart : text.length;
+        opts[found[i].lb] = text.slice(start, end).replace(/\s+/g, ' ').trim();
+      }
+      return { found: true, opts: opts, optionsText: text.slice(found[0].labelStart) };
+    }
+    return { found: false, opts: opts, optionsText: '' };
+  }
+
+  function splitStemOptions(raw) {
+    var p = parseOptions(raw);
+    if (p.found) {
+      var stemEnd = p.optionsText ? raw.indexOf(p.optionsText) : raw.length;
+      var stem = stemEnd > 0 ? raw.slice(0, stemEnd) : raw;
+      return { stem: stem, opts: p.opts, optionsPresent: true };
+    }
+    return { stem: raw, opts: p.opts, optionsPresent: false };
+  }
+
+  /* ---------------- 六、破题点与行文脉络（启发式） ---------------- */
+  var BREAK_ORDER = ['zhuanzhe', 'zongjie', 'yinguo', 'dijin', 'duice', 'binglie', 'xiangfan', 'jieshi', 'shewen'];
+  function findBreakPoint(stem) {
+    var hit = [];
+    BREAK_ORDER.forEach(function (k) {
+      KW[k].forEach(function (w) {
+        if (w.indexOf('...') > -1) {
+          var parts = w.split('...');
+          if (stem.indexOf(parts[0]) > -1 && stem.indexOf(parts[1]) > -1) hit.push({ kind: k, word: w });
+        } else if (stem.indexOf(w) > -1) {
+          hit.push({ kind: k, word: w });
+        }
+      });
+    });
+    return hit;
+  }
+
+  function describePattern(kind, word) {
+    var map = {
+      zhuanzhe: '转折关系：『' + word + '』，转折之后是重点。前面往往在铺垫/引出，真正想说的是转折后面那句，划重点要往后看。',
+      yinguo: '因果关系：出现『' + word + '』，结论重于原因。答案要落在结论/结果上，原因只是辅证。',
+      dijin: '递进关系：『' + word + '』，递进之后是重点，后文比前文更重要、更进一层。',
+      duice: '对策类文段：出现对策词『' + word + '』，对策即做法。核心是做了什么/该做什么，优选『对策+目的/意义』。',
+      binglie: '并列关系：『' + word + '』，并列前后同等重要，要留都留、要扔都扔，答案要能包住所有并列项（或提取共性）。',
+      shewen: '设问类：文段用设问引导，设问+回答往往就是作者的核心观点。',
+      xiangfan: '对照/变化：『' + word + '』提示前后相反相对，重点关注对比后要突出的那一方。',
+      jieshi: '解释说明：『' + word + '』后文就是对前文的解释，解释即为解题线索。',
+      zongjie: '总结：『' + word + '』收束全篇，总结句往往是核心观点所在。'
+    };
+    return map[kind] || '行文脉络：梳理各句作用，找作者表达观点的方式。';
+  }
+
+  /* ---------------- 七、核心话题提取 ---------------- */
+  var PREAMBLE_WORDS = ['老师', '四哥', '四哥老师', '您好', '你好', '嗨', '请问', '求问', '帮我', '帮我看看', '帮我分析', '看看', '分析一下', '解析一下', '讲一下', '讲讲', '这道', '这道题', '这道题帮我', '这题', '老师帮我', '来', '请'];
+  function cleanStem(s) {
+    var out = s;
+    for (var i = 0; i < 6; i++) {
+      var changed = false;
+      for (var j = 0; j < PREAMBLE_WORDS.length; j++) {
+        if (out.indexOf(PREAMBLE_WORDS[j]) === 0) {
+          out = out.slice(PREAMBLE_WORDS[j].length);
+          changed = true;
+          break;
+        }
+      }
+      out = out.replace(/^[，,。.\s:：]+/, '');
+      if (!changed) break;
+    }
+    return out.trim();
+  }
+  function extractCoreTopic(stem, points, type) {
+    var s = cleanStem(stem);
+    if (!s) s = stem;
+    var sentences = s.split(/[。；！？\n]/).filter(function (x) { return x.length >= 2; });
+    var target = sentences[0] || s;
+    var pk = (points && points.length) ? points[0] : null;
+    if (pk) {
+      var hitSentence = sentences.filter(function (x) { return x.indexOf(pk.word) > -1; })[0];
+      if (hitSentence) {
+        target = hitSentence;
+        // 转折/因果/递进/总结：重点在断点之后
+        var pos = hitSentence.indexOf(pk.word);
+        var after = hitSentence.slice(pos + pk.word.length);
+        if (/zhuanzhe|yinguo|dijin|zongjie/.test(pk.kind) && after.length >= 6) target = after;
+      }
+    } else if (sentences.length > 1) {
+      target = sentences[sentences.length - 1];
+    }
+    var frags = target.split(/[，、：]/).map(function (f) { return f.replace(/[^一-龿a-zA-Z0-9]/g, ''); })
+      .filter(function (f) { return f.length >= 2 && f !== (pk ? pk.word : ''); });
+    var sig = frags.filter(function (f) { return /(忽视|避免|防止|不能|不要|不得|应该|应当|需要|必须|要|成为|才是|正是|最|根本|关键|核心|缺乏|难以)/.test(f); });
+    var picked = (sig.length ? sig[0] : frags[0]) || target.replace(/[^一-龿a-zA-Z0-9]/g, '');
+    return picked.length > 14 ? picked.slice(0, 14) : picked;
+  }
+
+  /* ---------------- 八、逐选项启发式分析 ---------------- */
+  function tagOption(optText, coreWords, type) {
+    if (!optText) return { text: '', tag: '' };
+    var tags = [];
+    if (type === '逻辑填空题' && optText.length <= 14) {
+      return { text: optText, tag: '对照破题点做辨析：辨侧重、辨色彩、辨轻重，谁有逻辑对应点谁更好。' };
+    }
+    var hasCore = coreWords.length === 0 || coreWords.some(function (w) { return optText.indexOf(w) > -1; });
+    if (!hasCore) tags.push('未扣核心话题/偏离重点');
+    KW.error_abs.forEach(function (w) { if (optText.indexOf(w) > -1) tags.push('绝对化表述'); });
+    KW.error_vague.forEach(function (w) { if (optText.indexOf(w) > -1) tags.push('表述笼统/不明确'); });
+    if (optText.length < 12) tags.push('表述过于简单，信息量不足');
+    if (tags.length === 0) tags.push('放回原文比对位置：它对应的内容是文段重点吗？有没有同义替换？');
+    return { text: optText, tag: tags.join('、') };
+  }
+
+  /* ---------------- 九、离线解题引擎 ---------------- */
+  var TYPE_TIPS = {
+    '逻辑填空题': '【逻辑填空三把钥匙】看搭配、找逻辑、做辨析。先看空和前后词语搭不搭（不搭直接排除），再就近找逻辑对应（有词找词、没词看句），最后做辨析：辨侧重、辨色彩、辨轻重。',
+    '标题添加题': '【标题题要点】标题 = 中心理解找核心观点 + 尽量美观 + 紧贴原文。文段是问题，标题一般不是对策。',
+    '细节判断题': '【细节题要点】跟中心理解不一样——细节题考的是选项和原文一一对应，不用纠结这句话是不是重点，去原文里找依据。三句口诀：细节判断找对不对，提及/解释找有没有，查找找针对的具体对象。五大坑记好：无中生有、偷换概念、偷换时态、偷换语气、偷换逻辑。',
+    '排序题': '【排序题要点】记住：没有哪个句子一定适合做首句，一定是跟其他句子比出来的。先从选项入手判断首句，再找破题点（关联词捆绑、指代词、时间顺序、问题—对策），最后验证代入。',
+    '接语题': '【接语题要点】盯住文段最后谈论的核心话题，接的一定要扣尾句。尾句是对策就接具体做法，尾句是消极问题就按『展开问题—分析原因—解决』的顺序接，三类干扰排除：上文谈过的、无中生有的、非尾句核心的。',
+    '语句填空题': '【语句填空题要点】看横线位置：段首=总起后文，段尾=呼应前文（上文是问题就用对策收尾），段中=承上启下。本质就是把它当中心理解做，提炼核心观点去选。',
+    '词句理解题': '【词句理解题要点】先定位原文，再分析语境。优先就近：指代词就近原则、看标点、看解释说明词；就近解不了，再通观全文。',
+    '篇章阅读题': '【篇章阅读要点】不难，但很乱。先读设问，再看文段；用题干关键词去定位原文（第几段、专有名词、特殊标点）；读一段，匹配一次选项。'
+  };
+
+  function analyzeQuestion(raw, userAnswer, memory) {
+    var parsed = splitStemOptions(raw);
+    var stem = parsed.stem;
+    var type = detectQuestionType(stem);
+    var points = findBreakPoint(stem);
+    var core = extractCoreTopic(stem, points, type);
+
+    var lines = [];
+    lines.push('【题型判定】这是' + type + '。');
+    if (points.length) {
+      lines.push('【破题点】我一眼先圈『' + points[0].word + '』。' + describePattern(points[0].kind, points[0].word));
+    } else {
+      lines.push('【破题点】这题没有明显的关联词，那就靠『就近原则』+整体行文脉络来找观点，先把每句话的作用划出来：背景？问题？对策？重要性？意义？');
+    }
+    lines.push('【行文脉络】先别急着看选项，把文段过一遍，分出句子成分。记住三步走：第一步锁定核心观点，第二步放大选项差异，第三步实在纠结就选项倒推文段——把文段遮住，只看选项，问自己凭这个选项能不能猜出文章在讲什么。');
+    if (TYPE_TIPS[type]) lines.push(TYPE_TIPS[type]);
+
+    var opts = parsed.opts;
+    var anyOpt = LABELS.some(function (lb) { return opts[lb] !== ''; });
+    if (anyOpt) {
+      lines.push('【逐项分析】');
+      LABELS.forEach(function (lb) {
+        if (!opts[lb]) return;
+        var tg = tagOption(opts[lb], [core], type);
+        lines.push('◆ ' + lb + '．' + opts[lb]);
+        lines.push('　→ ' + (tg.tag || '放回原文比对'));
+      });
+    } else {
+      lines.push('【提醒】题干我看到了，选项还没一起发过来。把 A/B/C/D 选项也发我，我逐个给你拆。');
+    }
+
+    if (userAnswer) {
+      lines.push('【你的答案 ' + userAnswer + '】放回原文再核一遍：它讲的观点和文段核心一致吗？有没有贴错标签（非重点/无中生有/片面/偷换概念）？错不怕，把这次错因记下来，复盘比做十道新题都值。');
+    }
+
+    var memHit = memory ? getRelevantMemory(stem, type, memory) : null;
+    if (memHit) lines.push('【还记得上次吗】' + memHit);
+
+    lines.push('【总结】中心是『' + core + '』，答案要贴着它选。记住：接受选项不完美，对比择优。');
+    lines.push('【四哥说】' + pickMotivation());
+
+    return { type: type, breakWord: points.length ? points[0].word : '', core: core, lines: lines, full: lines.join('\n'), motivation: pickMotivation() };
+  }
+
+  /* ---------------- 十、记忆系统 ---------------- */
+  function createMemory() {
+    return { messages: [], profile: {}, errorLog: {}, questionLog: [] };
+  }
+
+  function extractProfile(text, memory) {
+    if (!memory) return {};
+    var m = memory.profile || {};
+    var nameRe = /(?:我叫|我是|你可以叫我|名字叫)([一-龿]{1,6})/;
+    var nm = text.match(nameRe);
+    if (nm && !/^(四哥|老师|四诗风雅颂)$/.test(nm[1])) m.name = nm[1];
+    var weakRe = /(逻辑填空|中心理解|片段阅读|排序题?|接语题?|细节题?|标题题?|篇章阅读|词句理解|语句填空).{0,10}(弱|错|差|不会|分不清|容易错|怕|愁)/;
+    var wm = text.match(weakRe);
+    if (wm) {
+      var t = wm[1];
+      if (/逻辑填空/.test(t)) m.weakType = '逻辑填空';
+      else if (/中心理解|片段阅读/.test(t)) m.weakType = '中心理解';
+      else if (/排序/.test(t)) m.weakType = '排序题';
+      else if (/接语/.test(t)) m.weakType = '接语题';
+      else if (/细节/.test(t)) m.weakType = '细节题';
+      else if (/标题/.test(t)) m.weakType = '标题题';
+      else if (/篇章/.test(t)) m.weakType = '篇章阅读';
+      else if (/词句/.test(t)) m.weakType = '词句理解';
+      else if (/语句填空/.test(t)) m.weakType = '语句填空';
+      else m.weakType = wm[1];
+    }
+    memory.profile = m;
+    return m;
+  }
+
+  function rememberExchange(userText, assistantReply, type, memory) {
+    if (!memory) return;
+    if (!userText && !assistantReply) return memory;
+    extractProfile(userText, memory);
+    memory.messages.push({ role: 'user', text: userText, type: type || '', time: new Date().toISOString() });
+    memory.messages.push({ role: 'assistant', text: assistantReply, time: new Date().toISOString() });
+    if (type && /(题)$/.test(type) && assistantReply.length > 40) memory.questionLog.push(type);
+    if (memory.messages.length > 400) memory.messages.splice(0, memory.messages.length - 400);
+    return memory;
+  }
+
+  function getRelevantMemory(currentStem, currentType, memory) {
+    if (!memory) return null;
+    var profile = memory.profile || {};
+    var bits = [];
+    if (profile.name) bits.push('我记得你叫' + profile.name + '，');
+    if (profile.weakType && profile.weakType === currentType) {
+      bits.push('你上次说' + currentType + '是你的薄弱点，正好这道题帮你再巩固一遍，');
+    } else if (profile.weakType) {
+      bits.push('你之前说' + profile.weakType + '这块容易错，');
+    }
+    var sameTypeCount = (memory.questionLog || []).filter(function (t) { return t === currentType; }).length;
+    if (sameTypeCount >= 2) bits.push('这已经是咱们第' + sameTypeCount + '次聊' + currentType + '了，熟能生巧，别嫌烦，');
+    if (!bits.length) return null;
+    return bits.join('') + '咱接着往下练。';
+  }
+
+  function weakTips(weak) {
+    if (/逻辑填空/.test(weak)) return '逻辑填空就靠三把钥匙：看搭配、找逻辑、做辨析；有词找词、没词看句，就近原则最好用。';
+    if (/中心理解|片段阅读/.test(weak)) return '中心理解就记住三步走，先把行文脉络捋顺，接受选项不完美，对比择优。';
+    if (/排序/.test(weak)) return '排序题没有哪句一定适合做首句，从选项入手先排首句，再找破题点，最后验证。';
+    if (/接语/.test(weak)) return '接语题盯住尾句核心话题，尾句是对策接做法，是问题接原因再解决。';
+    if (/细节/.test(weak)) return '细节题就是选项和原文一一对应，五大坑：无中生有、偷换概念、偷换时态、偷换语气、偷换逻辑。';
+    return '把破题点圈出来，一题一题复盘，量变引起质变。';
+  }
+
+  /* ---------------- 十一、离线回复生成器 ---------------- */
+  function looksLikeQuestion(text) {
+    if (parseOptions(text).found) return true;
+    if (/____|横线处/.test(text)) return true;
+    if (/意[在]|主旨|概括|说明|强调|标题|排序|接下来|填入|划线|指代|依次填入|相符|不符合|与原文|文段|这段话|这段文字|材料/.test(text)) return true;
+    if (text.length > 80) return true;
+    return false;
+  }
+
+  function conversationalReply(text, memory) {
+    var p = extractProfile(text, memory);
+    var name = p.name || '';
+    var weak = p.weakType || '';
+    var s = '';
+    if (/(还记得|记得|记住|之前|上次|上回)/.test(text)) {
+      s += (name ? name + '，' : '') + '我记得呢。';
+      s += weak ? '你上次跟我说的『' + weak + '』的薄弱点，我一直记在心上。' : '咱俩聊过的每道题、每次复盘，我都记着。';
+      if (weak) s += weakTips(weak);
+      return s + '慢慢练，别急，我一直在。' + pickMotivation();
+    }
+    if (/我叫|我是|名字叫/.test(text) && name) s += '好呀' + name + '，我记住了。';
+    else if (name) s += '诶，' + name + '你来了。';
+    else s += '同学们好。';
+    if (weak) {
+      s += '你说' + weak + '这块容易错，这太正常了，很多同学都栽在这。' + weakTips(weak);
+    } else {
+      s += '行测言语这块，把方法吃透，正确率自然就上来了。别慌，咱们慢慢来。';
+    }
+    return s + pickMotivation();
+  }
+
+  function generateReply(userText, memory, opts) {
+    opts = opts || {};
+    var text = (userText || '').trim();
+    if (!text) return '同学们好，把题目发我，咱们一起把它拿下。';
+
+    extractProfile(text, memory);
+
+    if (/^(你好|您好|hi|hello|嗨|老师好|四哥好|在吗|在不在)/i.test(text) && text.length < 24) {
+      var gn = (memory && memory.profile && memory.profile.name) || '同学';
+      return '你好呀' + gn + '，我是四哥。行测言语这块有什么题，尽管发来，拍照、打字、语音都行。别着急，咱们一道一道来。' + pickMotivation();
+    }
+
+    if (/(三步走|三步走原则)/.test(text)) {
+      return '三步走：第一步锁定核心观点——通读文段、梳理行文脉络，看作者靠对策/重要性/问题/设问/对比/总结词哪个方式提观点；第二步放大选项差异——只有一项提到核心观点就直接锁定，多项都提到就找选项差异点放回原文比对；第三步选项倒推文段——纠结时遮住文段，只看选项，问自己能不能凭它猜出文章核心。记住：接受选项不完美，对比择优。' + pickMotivation();
+    }
+    if (/(就近原则|找逻辑|有词找词|没词看句)/.test(text)) {
+      return '逻辑填空就三把钥匙：看搭配、找逻辑、做辨析。找逻辑的诀窍是『有词找词，没词看句』——有关联词就优先用关联词做破题点（转折/并列/因果/递进/形象化），没有关联词就用就近原则，离空最近的句子对它的解释概率最大。五大逻辑：相反、并列、推出、递进、形象化表达。记住了：相近≠相同，并列前后不一定同义，还得结合整个语境判断。' + pickMotivation();
+    }
+    if (/(命题人思维|读不懂|看不懂|没读懂)/.test(text)) {
+      return '读不懂就用命题人思维。命题人拿到一篇材料只做三件事：读懂作者想表达什么、紧扣观点设正确选项、再设三个错误选项往正确项上靠。所以当你站在答题者角度读不懂时，就站到命题人那边去想：他要突出什么？会在哪里埋雷？再配合第三步选项倒推文段——把文段遮住只看选项，猜得出核心观点的才可能是对的。' + pickMotivation();
+    }
+    if (/(对比择优|选项不完美|纠结|二选一)/.test(text)) {
+      return '二选一纠结很正常，因为命题人会故意把错误选项往正确选项上靠。破法：放大选项差异，把两个选项的差异点放回原文比对位置，谁贴原文谁赢。记住做题原则——接受选项不完美，对比择优。千万别在选项里找完美表述自我折磨。' + pickMotivation();
+    }
+    if (/(还记得|记得|之前|上次|上回)/.test(text) && text.length < 70) {
+      return conversationalReply(text, memory);
+    }
+
+    if (/(准确率|焦虑|压力|心态|烦躁|沮丧|坚持|上岸|没底|心里难受)/.test(text)) {
+      return '先把心态放平。学习是有起有伏的过程，状态有超常就有低谷，不用因为一时准确率低就垂头丧气。学习的本质就是平静地重复，不盯结果，盯住每次复盘。思多乱其志，实干出真知；行到水穷处，坐看云起时。' + pickMotivation();
+    }
+    if (/(出题|来一题|给我出|练一练|随机|练习)/.test(text)) {
+      var offered = offerQuestion(opts.onlyType);
+      return offered.text;
+    }
+    if (/(谢谢|感谢|懂了|明白了|知道了|感谢你)/.test(text)) {
+      return '不客气。懂了就对了，回去记得把破题点圈出来复盘一遍。慢慢来，你会越做越稳的。' + pickMotivation();
+    }
+    if (/(你是谁|介绍一下|你叫什么)/.test(text)) {
+      return '我是四哥，四诗风雅颂，超格教育的一名言语讲师，专讲行测言语理解。中心理解的三步走、逻辑填空的三把钥匙、七大文段类型，都是我上课吃饭的本事。同学们有问题随时找我。' + pickMotivation();
+    }
+    if (/(记忆|记住|忘|清空)/.test(text) && text.length < 40) {
+      var p2 = (memory && memory.profile) || {};
+      return (p2.name ? '我记得你叫' + p2.name + '。' : '') + (p2.weakType ? '你跟我说过，' + p2.weakType + '是你的薄弱点，我记着呢。' : '咱俩聊过的对话我都记着，需要的话可以在侧边栏看「记忆记录」，想重来就点「清空记忆」。') + '记忆是我的本分，你放心。' + pickMotivation();
+    }
+
+    if (!looksLikeQuestion(text)) {
+      return conversationalReply(text, memory);
+    }
+
+    var res = analyzeQuestion(text, '', memory);
+    return res.full;
+  }
+
+  /* ---------------- 十二、题库（出题） ---------------- */
+  var QUESTION_BANK = [
+    {
+      id: 1, type: '中心理解题', point: '转折关系 · 转折之后是重点',
+      stem: '近年来，许多城市将大量资金投入到大型地标建筑的建设中，希望以此提升城市形象、吸引游客。这些地标确实为城市增添了亮点。但是，也有专家指出，城市更新如果一味追求"高大上"，忽视老旧街区和社区的实际民生需求，反而会让城市失去烟火气与生活味。',
+      opts: { A: '城市地标建筑能够显著提升城市形象', B: '城市更新应避免"高大上"而忽视民生需求', C: '老旧街区缺乏足够的资金投入', D: '游客更容易被地标建筑所吸引' },
+      answer: 'B',
+      analysis: '本题答题逻辑：先通读文段梳理脉络——前面讲投入建地标是背景/铺垫，『但是』一出，重点就转到后面：一味追求高大上、忽视民生会失去烟火气。转折之后是重点，核心话题是城市更新不能忽视民生。A是转折前内容，非重点；C文中未展开，无中生有+片面；D是背景里的细节，偏离核心。B正好扣住转折后的观点，还带了方向（应避免…忽视民生），当选。'
+    },
+    {
+      id: 2, type: '中心理解题', point: '对策类 · 对策>问题/意义',
+      stem: '随着共享单车普及，一些城市出现了车辆乱停乱放、占用公共资源等问题。这些问题不仅影响市容，也给行人出行带来不便。对此，应当建立统一的停放管理规范，明确责任主体，同时利用技术手段对投放和停放进行动态监管。',
+      opts: { A: '共享单车带来了乱停乱放等一系列问题', B: '共享单车乱停放影响了市容和行人出行', C: '应当建立管理规范并利用技术手段加强监管', D: '共享单车方便了市民的短途出行' },
+      answer: 'C',
+      analysis: '本题答题逻辑：文段脉络是问题（乱停乱放、占资源）→对策（应当建立管理规范+技术监管）。有问题又有对策，对策才是重点。A、B都在讲问题，属于非重点；D讲方便出行，是文段没提的（无中生有）。C是对策，且是『对策+怎么做』的完整表述，当选。记住考点一：对策>问题/意义。'
+    },
+    {
+      id: 3, type: '中心理解题', point: '原因类 · 结论重于原因',
+      stem: '传统手工艺往往面临"人走艺绝"的困境。究其原因，一方面手工艺学习周期长、回报慢，年轻人不愿入行；另一方面，过度依赖口传心授，缺乏系统的文字记录与市场化传承机制。正因如此，传统手工艺的传承正面临前所未有的危机。',
+      opts: { A: '手工艺学习周期长、回报慢', B: '年轻人普遍不愿从事手工艺行业', C: '传统手工艺传承面临危机的深层原因', D: '手工艺需要建立市场化传承机制' },
+      answer: 'C',
+      analysis: '本题答题逻辑：文段先摆结论『人走艺绝的困境』，再用『究其原因』展开两大原因，最后用『正因如此』回扣结论：传承面临危机。这是原因类文段，核心是结论+原因，优选『因+果』。A、B是原因的一部分，片面；D是文段没给的对策，不能凭空加；C把结论（危机）和原因（深层原因）都包住了，当选。'
+    },
+    {
+      id: 4, type: '中心理解题', point: '并列关系 · 要留都留、提取共性',
+      stem: '培养良好的阅读习惯，一方面需要家庭营造浓厚的读书氛围，让阅读成为日常生活的一部分；另一方面需要学校引导孩子掌握科学的阅读方法，激发持续的阅读兴趣；此外，社会层面也应当提供丰富多样的公共阅读资源。只有各方形成合力，孩子的阅读习惯才能真正养成。',
+      opts: { A: '家庭应营造浓厚的读书氛围', B: '学校应引导孩子掌握阅读方法', C: '培养阅读习惯需要家庭、学校、社会多方合力', D: '当前孩子的阅读习惯普遍较差' },
+      answer: 'C',
+      analysis: '本题答题逻辑：文段用『一方面…另一方面…此外…』把家庭、学校、社会三个主体并列起来，最后『只有各方形成合力』点题。并列关系，要留都留、要扔都扔，答案要包得住三个并列项。A、B只取其一，片面；D是无中生有+问题表述；C用『家庭、学校、社会多方合力』提取共性、全面概括，当选。'
+    },
+    {
+      id: 5, type: '逻辑填空题', point: '相反关系 · 转折词前后语义相反',
+      stem: '网络时代，信息的获取变得更加____，但人们面对的信息过载与噪音也随之增多，真正有价值的内容反而更难以____。',
+      opts: { A: '便利 凸显', B: '便捷 甄别', C: '迅速 呈现', D: '容易 流传' },
+      answer: 'B',
+      analysis: '本题答题逻辑：看到『但』——转折，前后语义相反。前面说获取变____（好的一面），后面『过载与噪音增多』『反而更难以____』（难的一面）。第一空应填积极的、方便的：便利/便捷都对；第二空转折后应是『难分辨』，甄别最贴（把有价值的内容挑出来）。A的『凸显』是让它更明显，与『难』相反；C『呈现』不通；D『流传』不扣『有价值的内容』。答案B。记住：有转折词，优先以它为破题点。'
+    },
+    {
+      id: 6, type: '逻辑填空题', point: '解释说明 · 就近原则',
+      stem: '近年来，不少历史文化街区引入咖啡馆、文创店等新业态，试图让老街"活"起来。这种做法无异于为老街区注入了新的生命力，使其在保留历史记忆的同时，也能满足现代人的消费需求。这种尝试____。',
+      opts: { A: '多此一举', B: '画蛇添足', C: '锦上添花', D: '得不偿失' },
+      answer: 'C',
+      analysis: '本题答题逻辑：注意『无异于』——同义互换词，后面『为老街区注入新的生命力』就是对横线处的解释。解释说明类的题用就近原则，离空最近的解释就是线索。让老街更有活力、既能保留记忆又能满足需求，这是好上加好，锦上添花最贴切。A、B、D都是贬义的、讲反效果，跟文段的积极色彩完全相反，直接排除。'
+    },
+    {
+      id: 7, type: '逻辑填空题', point: '对比辨析 · 辨侧重、辨色彩、辨轻重',
+      stem: '面对激烈的市场竞争，一些企业选择____竞争、打价格战，短期或许能赢得市场份额，但从长远看，无异于____，最终损害的是整个行业的健康发展。',
+      opts: { A: '参与 竭泽而渔', B: '回避 杀鸡取卵', C: '规避 饮鸩止渴', D: '排斥 抱薪救火' },
+      answer: 'A',
+      analysis: '本题答题逻辑：第二空前有『无异于』，后文解释是『最终损害行业健康发展』——为了眼前利益牺牲长远，对应竭泽而渔/杀鸡取卵。再看第一空：前文讲企业『打价格战』，说明它是在参与竞争而不是回避规避，排除B、C、D的第一空。剩下A『参与竞争、打价格战→竭泽而渔』逻辑完全通。辨析的时候先定第一空（动词搭配），再辨第二空（侧重点：损害长远=竭泽而渔），对比择优。'
+    },
+    {
+      id: 8, type: '标题添加题', point: '标题 = 核心观点 + 美观 + 贴原文',
+      stem: '光污染正在悄然吞噬城市的夜空。随着各类灯光设施不断增多，城市上空的光亮越来越强，原本清晰可见的银河在许多城市已经难觅踪影。科学家警告，过度的人工照明不仅浪费能源，还会干扰动植物的生物节律。',
+      opts: { A: '城市的夜晚为何不再黑暗', B: '光污染：亮了城市，暗了星空', C: '灯光设施的是是非非', D: '城市照明技术的利与弊' },
+      answer: 'B',
+      analysis: '本题答题逻辑：标题题先找核心观点——文段讲光污染导致星空看不见，还有危害。核心话题是光污染+星空消失。B用『亮了城市，暗了星空』一个对仗，把原因（光污染/灯光）和结果（星空消失）都装进去了，还押韵美观，贴紧原文。A问句问的是原因，偏题；C、D扩大成灯光设施/照明技术，偏离核心。选B。标题题记住：贴原文 + 尽量美观。'
+    },
+    {
+      id: 9, type: '细节判断题', point: '细节题 · 与原文一一对应',
+      stem: '新能源汽车的电池在使用一定年限后容量会有所衰减，这属于正常现象。目前多数车企为动力电池提供8年或15万公里（以先到者为准）的质保服务。专家表示，电池回收体系正在逐步完善，但仍有大量废旧电池未能得到规范处理。根据这段文字，下列表述正确的是：',
+      opts: { A: '所有新能源汽车的电池都不会衰减', B: '多数车企为电池提供质保服务', C: '废旧电池均已得到规范处理', D: '电池质保年限统一为8年' },
+      answer: 'B',
+      analysis: '本题答题逻辑：细节题找答案要跟原文一一对应。原文说『多数车企为动力电池提供8年或15万公里质保』，B与之一致，当选。A『所有…都不会衰减』跟原文『会有所衰减』相反，且绝对化；C『均已得到规范处理』与『仍有大量未能规范处理』矛盾；D『统一为8年』漏掉了15万公里这个条件，偷换概念。细节题口诀：找对不对，一一对应。'
+    },
+    {
+      id: 10, type: '语句排序题', point: '排序题 · 首句排除 + 破题点',
+      stem: '①久而久之，人们对社区的归属感会越来越淡薄\n②高楼大厦取代了低矮的院落，邻里之间的走动明显减少\n③城市化的推进改变了传统的人居模式\n④这种变化在带来便捷生活的同时，也带来了新的问题\n请排出正确的顺序。',
+      opts: { A: '③②④①', B: '②③①④', C: '③①②④', D: '②④③①' },
+      answer: 'A',
+      analysis: '本题答题逻辑：先看首句——③是总起（城市化的推进改变了人居模式），②是具体表现（高楼取代院落），总起在前，排除B、D。再看破题点：①里有『久而久之』承接后果，④里『这种变化』要指代前面的具体变化，所以④应该紧跟在②（具体变化）之后。③→②（总到分）→④（承接指代）→①（后果），即A。排序题原则：没有哪个句子一定适合做首句，跟其他句子比出来。'
+    },
+    {
+      id: 11, type: '接语选择题', point: '接语题 · 盯住尾句核心话题',
+      stem: '数字遗产是指个人在网络空间中留下的数据资产，包括社交媒体账号、数字钱包等。随着人们线上生活时间的增长，数字遗产的继承问题日益凸显。目前，多数平台对用户去世后的账号处理规则并不明确，这给家属继承带来了很大困扰。作者接下来最可能讲述的是：',
+      opts: { A: '数字遗产的概念界定', B: '家属如何依法继承数字遗产', C: '平台账号处理规则的历史沿革', D: '数字遗产的经济价值' },
+      answer: 'B',
+      analysis: '本题答题逻辑：接语题盯住文段最后谈论的核心话题。尾句是『平台规则不明确→给家属继承带来困扰』，这是一个消极问题。按四哥教的：尾句是消极问题，下文就按『展开问题—分析原因—解决』走，最可能接『如何解决』——家属怎么继承。B正是解决方案。A概念在前文已讲（上文谈过的不接），C偏离尾句核心（历史沿革无关），D无中生有。选B。'
+    },
+    {
+      id: 12, type: '中心理解题', point: '递进关系 · 递进之后是重点',
+      stem: '基层治理能力的提升，需要干部深入一线、熟悉情况，这固然重要。更重要的是，要善于运用数字化工具，把大数据、云计算等技术真正用到网格化管理中，从而实现对治理难题的精准预警和快速处置。',
+      opts: { A: '干部深入一线熟悉情况是基层治理的基础', B: '数字化工具能精准预警并快速处置治理难题', C: '基层治理离不开大数据和云计算技术', D: '提升基层治理能力需要数字化手段的深度运用' },
+      answer: 'D',
+      analysis: '本题答题逻辑：文段先让步说『深入一线固然重要』，接着『更重要的是』递进到数字化工具的运用——递进之后是重点。核心观点：基层治理要善用数字化工具。B虽然提到了数字化工具，但只讲了『能做什么』（效果层面），没把『提升基层治理能力需要运用数字化手段』这个对策讲全；A是递进前内容，非重点；C说『离不开』，原文没有绝对化的意思，且表述不如D精准。D是完整的对策表述（对策+目的），当选。'
+    }
+  ];
+
+  function offerQuestion(onlyType) {
+    var bank = QUESTION_BANK.filter(function (q) { return !onlyType || q.type === onlyType; });
+    if (!bank.length) bank = QUESTION_BANK;
+    var q = bank[Math.floor(Math.random() * bank.length)];
+    return {
+      question: q,
+      text: '来，这道' + q.type + '给你练练手（' + q.point + '）：\n\n' + q.stem + '\n\nA．' + q.opts.A + '\nB．' + q.opts.B + '\nC．' + q.opts.C + '\nD．' + q.opts.D + '\n\n你选哪个？选完把答案发我，我给你逐项拆。'
+    };
+  }
+
+  function analyzeBankQuestion(q, userAnswer, memory) {
+    var correct = (userAnswer || '').toUpperCase() === q.answer;
+    var head = '【' + q.type + '｜' + q.point + '】\n' + q.stem + '\n\n' + q.analysis;
+    var mem = memory ? getRelevantMemory(q.stem, q.type, memory) : null;
+    var tail = mem ? '\n（' + mem + '）' : '';
+    tail += '\n【四哥说】' + pickMotivation();
+    return { correct: correct, answer: q.answer, text: head + tail };
+  }
+
+  /* ---------------- 十三、记忆自检（模拟对话验证记忆） ---------------- */
+  function runMemorySimulation() {
+    var memory = createMemory();
+    var log = [];
+    function step(userText) {
+      var reply = generateReply(userText, memory);
+      rememberExchange(userText, reply, detectQuestionType(userText), memory);
+      log.push({ role: 'user', text: userText });
+      log.push({ role: 'assistant', text: reply });
+      return reply;
+    }
+    step('老师你好，我叫小李，最近逻辑填空总错，尤其是并列关系总是分不清。');
+    step('四哥，帮我看看这道逻辑填空：培养阅读习惯需要家庭、学校、社会共同努力，一方面要营造氛围，另一方面要____孩子掌握科学方法，此外还要提供丰富的公共资源。A. 引导  B. 强迫  C. 放任  D. 忽视');
+    step('老师，这道题帮我看看：随着共享单车普及，一些城市出现了乱停乱放的问题。对此应当建立统一的停放管理规范，同时利用技术手段动态监管。A. 共享单车带来了问题 B. 应当建立管理规范加强监管 C. 共享单车方便出行');
+    var finalReply = step('老师，你还记得我之前说过的那句话吗？我现在做逻辑填空心里还是有点没底。');
+    var checks = {
+      remembersName: /小李/.test(finalReply),
+      remembersWeakness: /(并列|逻辑填空|薄弱|容易错)/.test(finalReply),
+      givesMethod: /(并列|有词找词|没词看句|就近|破题点|三把钥匙|看搭配)/.test(finalReply),
+      endsWithMoti: /(上岸|种子|云起|水穷处|重复|进步|长期主义|稳住|慢慢)/.test(finalReply),
+      warm: /(别慌|别急|正常|没事|心态|慢慢|咱们|不着急|我一直在)/.test(finalReply)
+    };
+    var pass = checks.remembersName && checks.remembersWeakness;
+    return { pass: pass, checks: checks, log: log, memory: memory };
+  }
+
+  return {
+    SIGE_PERSONA: SIGE_PERSONA,
+    MOTIVATIONS: MOTIVATIONS,
+    pickMotivation: pickMotivation,
+    QUESTION_BANK: QUESTION_BANK,
+    detectQuestionType: detectQuestionType,
+    parseOptions: parseOptions,
+    splitStemOptions: splitStemOptions,
+    analyzeQuestion: analyzeQuestion,
+    analyzeBankQuestion: analyzeBankQuestion,
+    offerQuestion: offerQuestion,
+    generateReply: generateReply,
+    createMemory: createMemory,
+    extractProfile: extractProfile,
+    rememberExchange: rememberExchange,
+    getRelevantMemory: getRelevantMemory,
+    runMemorySimulation: runMemorySimulation,
+    looksLikeQuestion: looksLikeQuestion,
+    VERSION: '1.0.1'
+  };
+});
+
+</script>
+<script>
+(function(){
+'use strict';
+var C = window.SigeCore;
+
+/* ================= 工具 ================= */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function scrollBottom(){ var c=$('chat'); c.scrollTop = c.scrollHeight; }
+
+/* ================= 记忆（localStorage） ================= */
+var MEM_KEY = 'sige_memory_v1';
+function loadMemory(){
+  try{ var raw = localStorage.getItem(MEM_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return C.createMemory();
+}
+function saveMemory(){ try{ localStorage.setItem(MEM_KEY, JSON.stringify(memory)); }catch(e){ if(memory.messages.length>100){ memory.messages.splice(0,memory.messages.length-100); try{ localStorage.setItem(MEM_KEY, JSON.stringify(memory)); }catch(e2){} } } }
+function clearMemory(){ try{ localStorage.removeItem(MEM_KEY); }catch(e){} memory = C.createMemory(); }
+var memory = loadMemory();
+
+/* ================= API 设置 ================= */
+var API_KEY = 'sige_api_v1';
+function loadApi(){
+  try{ return JSON.parse(localStorage.getItem(API_KEY)||'{}'); }catch(e){ return {}; }
+}
+function saveApi(a){ localStorage.setItem(API_KEY, JSON.stringify(a)); }
+var apiCfg = loadApi();
+
+function isApiOn(){
+  return apiCfg.enabled && apiCfg.key && /https?:\/\//.test(apiCfg.base||'');
+}
+
+/* ================= 消息渲染 ================= */
+function addMessage(role, contentHtml, opts){
+  opts = opts || {};
+  var chat = $('chat');
+  var div = document.createElement('div');
+  div.className = 'msg ' + role;
+  if(role === 'assistant'){
+    var av = document.createElement('div'); av.className='avatar-mini';
+    av.innerHTML = $('avatarBox').innerHTML;
+    div.appendChild(av);
+  }
+  var wrap = document.createElement('div');
+  wrap.style.maxWidth = '78%';
+  var bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  if(opts.html){ bubble.innerHTML = contentHtml; }
+  else { bubble.textContent = contentHtml; }
+  wrap.appendChild(bubble);
+  if(opts.extra && opts.extra.appendTo){
+    var appendEl = document.createElement('div');
+    appendEl.innerHTML = opts.extra.appendTo;
+    wrap.appendChild(appendEl);
+    if(opts.extra.cb) opts.extra.cb(appendEl);
+  }
+  div.appendChild(wrap);
+  chat.appendChild(div);
+  scrollBottom();
+  return { div:div, bubble:bubble, wrap:wrap };
+}
+
+function addTyping(){
+  var t = document.createElement('div');
+  t.className = 'typing-dots';
+  t.innerHTML = '<span></span><span></span><span></span>';
+  var m = document.createElement('div'); m.className='msg assistant';
+  var av=document.createElement('div'); av.className='avatar-mini'; av.innerHTML=$('avatarBox').innerHTML;
+  m.appendChild(av);
+  var w=document.createElement('div'); w.className='bubble'; w.appendChild(t);
+  m.appendChild(w); $('chat').appendChild(m); scrollBottom();
+  return m;
+}
+
+function typewriter(el, text, speed, cb){
+  var i=0;
+  var chunk = Math.max(2, Math.floor(text.length/90)); // 长文本分块大，动画更快完成
+  var timer = setInterval(function(){
+    i += chunk;
+    el.textContent = text.slice(0, i);
+    scrollBottom();
+    if(i >= text.length){ clearInterval(timer); el.textContent = text; scrollBottom(); if(cb) cb(); }
+  }, speed||14);
+  return { stop: function(){ clearInterval(timer); el.textContent = text; } };
+}
+
+/* ================= 发送（带队列，不丢消息） ================= */
+var pendingBank = null;   // 当前出题的题目对象
+var sending = false;
+var sendQueue = [];
+
+function doneSending(){
+  sending = false;
+  if(sendQueue.length){ var next = sendQueue.shift(); processSend(next); }
+}
+
+function sendText(text){
+  text = (text||'').trim();
+  if(!text) return;
+  if(sending){ sendQueue.push(text); return; }
+  processSend(text);
+}
+
+function processSend(text){
+  sending = true;
+  addMessage('user', text);
+
+  // 先判断是不是在回答刚出的题
+  var letter = text.match(/^[ABCD]\s*$/i);
+  if(pendingBank && letter){
+    var ans = letter[0].toUpperCase();
+    var res = C.analyzeBankQuestion(pendingBank, ans, memory);
+    var correctTxt = res.correct ? '✅ 对了，不错！' : '❌ 这题答案是 ' + res.answer + '。';
+    var typing = addTyping();
+    var finalTxt = correctTxt + '\n\n' + res.text;
+    typewriter(typing.querySelector('.bubble'), finalTxt, 14, function(){
+      C.rememberExchange(text, finalTxt, pendingBank.type, memory); saveMemory();
+      doneSending();
+    });
+    pendingBank = null;
+    return;
+  }
+  // 用户发来新消息（不是单字母答案）时，取消悬而未决的出题
+  pendingBank = null;
+
+  var type = C.detectQuestionType(text);
+
+  // API 模式优先
+  if(isApiOn()){
+    apiChat(text, type);
+    return;
+  }
+
+  var reply = C.generateReply(text, memory);
+  var typing = addTyping();
+  typewriter(typing.querySelector('.bubble'), reply, 14, function(){
+    C.rememberExchange(text, reply, type, memory);
+    saveMemory();
+    doneSending();
+  });
+}
+
+/* ---- 出题 ---- */
+function offerAndSend(onlyType){
+  var offered = C.offerQuestion(onlyType);
+  pendingBank = offered.question;
+  var typing = addTyping();
+  var bubble = typing.querySelector('.bubble');
+  // 选项按钮
+  var chips = '<div class="opt-row">' + ['A','B','C','D'].map(function(lb){
+    return '<button class="opt-chip" data-opt="' + lb + '">' + lb + '</button>';
+  }).join('') + '</div>';
+  typewriter(bubble, offered.text + '\n', 14, function(){
+    var row = document.createElement('div');
+    row.innerHTML = chips;
+    var wrap = bubble.parentNode; wrap.appendChild(row);
+    row.querySelectorAll('.opt-chip').forEach(function(b){
+      b.addEventListener('click', function(){ sendText(b.getAttribute('data-opt')); });
+    });
+    scrollBottom();
+    // 出题是四哥的动作，记为 assistant 消息
+    memory.messages.push({ role: 'assistant', text: offered.text, type: offered.question.type, time: new Date().toISOString() });
+    saveMemory();
+  });
+}
+
+/* ================= API 对话 ================= */
+function buildMessages(currentText){
+  var arr = [{ role:'system', content: C.SIGE_PERSONA }];
+  var recent = memory.messages.slice(-24);
+  recent.forEach(function(m){
+    if(m.text) arr.push({ role: m.role, content: m.text });
+  });
+  if(currentText) arr.push({ role:'user', content: currentText });
+  return arr;
+}
+function apiChat(text, type){
+  var typing = addTyping();
+  var body = { model: apiCfg.model || 'deepseek-chat', messages: buildMessages(text), temperature: 0.7, max_tokens: 1200 };
+  fetch((apiCfg.base||'').replace(/\/+$/,'') + '/chat/completions', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + apiCfg.key },
+    body: JSON.stringify(body)
+  }).then(function(res){
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }).then(function(data){
+    var reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    if(!reply) throw new Error('空回复');
+    // 补一句励志收尾（若 API 未给）
+    if(!/上岸|种子|水穷处|云起|进步|重复|长期主义|生根/.test(reply)){
+      reply += '\n\n【四哥说】' + C.pickMotivation();
+    }
+    typewriter(typing.querySelector('.bubble'), reply, 12, function(){
+      C.rememberExchange(text, reply, type, memory); saveMemory(); doneSending();
+    });
+  }).catch(function(err){
+    var fallback = C.generateReply(text, memory);
+    typewriter(typing.querySelector('.bubble'), '⚠️ 大模型连接失败（' + err.message + '），四哥先用离线引擎接住你：\n\n' + fallback, 14, function(){
+      C.rememberExchange(text, fallback, type, memory); saveMemory(); doneSending();
+    });
+  });
+}
+
+/* ================= 拍照传题 + OCR ================= */
+var tesseractLoading = false;
+function attachImage(file){
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = '<img src="' + e.target.result + '" alt="题目图片">';
+    addMessage('user', img, { html:true });
+    var hint = $('ocrHint');
+    hint.innerHTML = '🖼 图片已上传，四哥正在尝试 OCR 识别文字……（若识别失败请手动打字）';
+    runOCR(file, hint);
+  };
+  reader.readAsDataURL(file);
+}
+function runOCR(file, hintEl){
+  if(typeof Tesseract === 'undefined'){
+    loadTesseract().then(function(){
+      recognize(file, hintEl);
+    }).catch(function(){
+      hintEl.innerHTML = '📵 离线无法加载 OCR，请点击「✍️ 文字传题」手动输入题干与选项。';
+    });
+    return;
+  }
+  recognize(file, hintEl);
+}
+function loadTesseract(){
+  return new Promise(function(resolve, reject){
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload = function(){ resolve(); };
+    s.onerror = function(){ reject(new Error('tesseract load fail')); };
+    document.head.appendChild(s);
+    setTimeout(function(){ reject(new Error('timeout')); }, 25000);
+  });
+}
+function recognize(file, hintEl){
+  var started = Date.now();
+  Tesseract.recognize(file, 'chi_sim+eng', { logger: function(m){ if(m.status==='recognizing text'){ hintEl.innerHTML = '🧠 识别中 ' + Math.round(m.progress*100) + '% ……'; } } })
+    .then(function(r){
+      var text = (r.data && r.data.text || '').trim();
+      if(text && text.length > 3){
+        hintEl.innerHTML = '✅ OCR 识别完成（' + Math.round((Date.now()-started)/1000) + 's）。文字已填入输入框，核对后发送。';
+        var ta = $('input');
+        ta.value = text.replace(/\s*\n\s*/g, '\n');
+        ta.focus();
+        autoGrow(ta);
+        // 预填但让用户确认，不自动发送
+      } else {
+        hintEl.innerHTML = '⚠️ 图片里没识别到足够文字，请手动输入题干。';
+      }
+    }).catch(function(err){
+      hintEl.innerHTML = '⚠️ OCR 失败（' + err.message + '），请手动输入题干。';
+    });
+}
+function autoGrow(ta){ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'; }
+
+/* ================= 语音输入 ================= */
+var recognition = null, recOn = false;
+function initSpeech(){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ $('btnMic').textContent = '🎤 不支持语音'; $('btnMic').disabled = true; $('navVoice').innerHTML = '<span class="ico">🎤</span><span class="lbl">语音输入</span>'; return; }
+  recognition = new SR();
+  recognition.lang = 'zh-CN';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.onresult = function(e){
+    var t='';
+    for(var i=0;i<e.results.length;i++) t += e.results[i][0].transcript;
+    $('input').value = t;
+    autoGrow($('input'));
+  };
+  recognition.onend = function(){ setRec(false); };
+  recognition.onerror = function(){ setRec(false); $('recNote').classList.remove('show'); };
+}
+function setRec(on){
+  recOn = on;
+  $('btnMic').classList.toggle('recording', on);
+  $('btnMic').textContent = on ? '⏹ 停止' : '🎤 语音输入';
+  $('recNote').classList.toggle('show', on);
+  $('navVoice').innerHTML = on ? '<span class="ico">🎤</span><span class="lbl">语音输入</span>' : '<span class="ico">🎤</span><span class="lbl">语音输入</span>';
+}
+function toggleRec(){
+  if(!recognition) return;
+  if(recOn){ recognition.stop(); setRec(false); }
+  else { try{ recognition.start(); setRec(true); }catch(e){ setRec(false); } }
+}
+
+/* ================= 方法速查内容 ================= */
+var METHOD_HTML = [
+  '<div class="cheat"><h4>🧠 中心理解 · 三步走</h4>' +
+  '<p><span class="k">第一步 锁定核心观点：</span>通读文段、梳理行文脉络，看作者靠「对策 / 重要性 / 问题 / 设问 / 对比 / 总结词」哪种方式提观点。</p>' +
+  '<p><span class="k">第二步 放大选项差异：</span>只有一项提到核心观点→直接核对锁定；多项都提到→找选项差异点放回原文比对（治二选一纠结）。</p>' +
+  '<p><span class="k">第三步 选项倒推文段：</span>纠结时把文段遮住只看选项，问自己能不能凭它猜出文章核心。猜得出才可能对。</p></div>',
+  '<div class="cheat"><h4>🔑 逻辑填空 · 三把钥匙</h4>' +
+  '<p><span class="k">看搭配：</span>空与前后词语搭不搭，不搭直接排除。</p>' +
+  '<p><span class="k">找逻辑：</span>有词找词（关联词），没词看句（就近原则，离空最近的句子解释概率最大）。五大逻辑：相反 / 并列 / 推出 / 递进 / 形象化。</p>' +
+  '<p><span class="k">做辨析：</span>辨侧重、辨色彩、辨轻重；四个选项都读得通时，谁有逻辑对应点谁更好。</p></div>',
+  '<div class="cheat"><h4>🗂 七大文段类型（复盘用，不硬套）</h4>' +
+  '<p><span class="k">对策类</span>（最高频）：对策&gt;目的/问题/意义，对策内容&gt;表述形式。单一对策直接选；递进取递进后；并列有共性提共性、无共性目光前移。</p>' +
+  '<p><span class="k">重要性 / 反向对策 / 问题 / 对比 / 设问 / 原因 / 补充类</span>：各自记口诀（详见对话里四哥的讲解）。</p>' +
+  '<p><span class="k">关联词辅助：</span>转折之后是重点；并列要留都留、提取共性；递进之后是重点；因果结论重于原因。</p>' +
+  '<p><span class="k">错误选项五大规律：</span>扩大/缩小范围、非重点、片面、无中生有、主体可省略。</p></div>',
+  '<div class="cheat"><h4>🎯 小题型口诀</h4>' +
+  '<p><span class="k">标题题</span>＝中心理解找核心＋美观＋贴原文；<span class="k">细节题</span>＝找对不对/找有没有/找对象，五坑（无中生有、偷换概念/时态/语气/逻辑）；</p>' +
+  '<p><span class="k">排序题</span>＝首句排除＋破题点＋验证；<span class="k">接语题</span>＝盯尾句核心（对策接做法，问题接原因-解决）；</p>' +
+  '<p><span class="k">语句填空</span>＝段首总起/段尾呼应/段中承上启下；<span class="k">词句理解</span>＝定位＋就近＋通观；<span class="k">篇章阅读</span>＝不难，但很乱，读一段匹配一次。</p></div>'
+].join('');
+
+/* ================= 弹层开关 ================= */
+function showOverlay(id){ $(id).classList.add('show'); }
+function hideOverlay(id){ $(id).classList.remove('show'); }
+document.querySelectorAll('.modal-close').forEach(function(b){
+  b.addEventListener('click', function(){ hideOverlay(b.getAttribute('data-close')); });
+});
+document.querySelectorAll('.overlay').forEach(function(o){
+  o.addEventListener('click', function(e){ if(e.target === o) o.classList.remove('show'); });
+});
+
+/* ================= 记忆面板 ================= */
+function renderMemory(){
+  var p = memory.profile || {};
+  var ql = memory.questionLog || [];
+  var counts = {};
+  ql.forEach(function(t){ counts[t] = (counts[t]||0)+1; });
+  var html = '<div class="mem-stat">' +
+    '<div><b>' + memory.messages.length + '</b><span>对话条数</span></div>' +
+    '<div><b>' + (p.name || '—') + '</b><span>学生姓名</span></div>' +
+    '<div><b>' + (p.weakType || '—') + '</b><span>薄弱题型</span></div>' +
+    '<div><b>' + ql.length + '</b><span>练过题数</span></div>' +
+    '</div>';
+  html += '<div class="mem-item"><div class="who">🧑‍🎓 学生档案</div><div class="txt">' + esc(JSON.stringify(p)) + '</div></div>';
+  if(Object.keys(counts).length){
+    html += '<div class="mem-item"><div class="who">📊 题型练习统计</div><div class="txt">' +
+      Object.keys(counts).map(function(t){ return t + ' × ' + counts[t]; }).join('，') + '</div></div>';
+  }
+  html += '<div class="mem-item"><div class="who">🕘 最近对话</div>';
+  memory.messages.slice(-6).forEach(function(m){
+    html += '<div class="txt" style="margin-top:6px"><b style="color:' + (m.role==='user' ? '#f472a0':'#c23666') + '">' + (m.role==='user'?'我':'四哥') + '：</b>' + esc(m.text.slice(0,90)) + (m.text.length>90?'…':'') + '</div>';
+  });
+  html += '</div>';
+  $('memoryBody').innerHTML = html;
+}
+
+/* ================= 记忆自检面板 ================= */
+function renderTest(){
+  var r = C.runMemorySimulation();
+  var html = '<div class="test-result ' + (r.pass?'pass':'fail') + '">' + (r.pass?'✅ 记忆功能验证通过':'❌ 记忆功能有项未生效') +
+    ' —— 模拟 3 轮对话后，最后一轮四哥主动记得了学生姓名与薄弱点</div>';
+  html += '<div style="margin-top:10px;font-weight:700;color:var(--pink-700)">逐项检查：</div>';
+  var labels = { remembersName:'记得学生名字', remembersWeakness:'记得薄弱题型', givesMethod:'主动给出对应方法', endsWithMoti:'以励志短句收尾', warm:'回答有温度' };
+  Object.keys(r.checks).forEach(function(k){
+    html += '<div class="test-check">' + (r.checks[k]?'✅':'❌') + ' ' + (labels[k]||k) + '</div>';
+  });
+  html += '<div class="divider"></div><div style="font-weight:700;color:var(--pink-700);margin-bottom:8px">模拟对话实录：</div>';
+  r.log.forEach(function(m){
+    html += '<div style="margin-bottom:10px"><div style="font-weight:700;color:' + (m.role==='user'?'#f472a0':'#c23666') + '">' + (m.role==='user'?'🧑 学生':'👨‍🏫 四哥') + '：</div>' +
+      '<div style="font-size:12.5px;white-space:pre-wrap;background:var(--pink-50);border-radius:10px;padding:8px 10px;margin-top:3px">' + esc(m.text.slice(0,240)) + (m.text.length>240?'…':'') + '</div></div>';
+  });
+  $('testBody').innerHTML = html;
+}
+
+/* ================= API 设置面板 ================= */
+function renderApi(){
+  var html = '<div class="form-item"><label>启用大模型对话（默认关闭＝离线引擎，填好以下信息并打开开关即升级）</label>' +
+    '<div class="switch-row"><span style="font-size:13px">启用 API</span><label class="switch"><input type="checkbox" id="apiEnabled" ' + (apiCfg.enabled?'checked':'') + '><span class="slider"></span></label></div></div>' +
+    '<div class="form-item"><label>API 接口地址（OpenAI 兼容，支持 DeepSeek/通义/OpenAI 等）</label>' +
+    '<input type="text" id="apiBase" placeholder="https://api.deepseek.com/v1" value="' + esc(apiCfg.base||'https://api.deepseek.com/v1') + '"></div>' +
+    '<div class="form-item"><label>模型名称</label>' +
+    '<input type="text" id="apiModel" placeholder="deepseek-chat" value="' + esc(apiCfg.model||'deepseek-chat') + '"></div>' +
+    '<div class="form-item"><label>API Key</label>' +
+    '<input type="password" id="apiKey" placeholder="sk-..." value="' + esc(apiCfg.key||'') + '"></div>' +
+    '<div class="form-item"><button class="btn-primary" id="apiSave">💾 保存设置</button> ' +
+    '<button class="btn-ghost" id="apiTest">🔌 测试连接</button></div>' +
+    '<div class="hint">提示：对话走大模型时，四哥会用这套性格档案驱动自己，回答问题更聪明；断网或 Key 失效时自动退回离线引擎，保证你随时能用。所有 Key 只保存在本地浏览器，不会上传到任何服务器。</div>';
+  $('apiBody').innerHTML = html;
+  $('apiEnabled').addEventListener('change', function(){ apiCfg.enabled = $('apiEnabled').checked; saveApi(apiCfg); updateModeTag(); });
+  $('apiSave').addEventListener('click', function(){
+    apiCfg.enabled = $('apiEnabled').checked;
+    apiCfg.base = $('apiBase').value.trim();
+    apiCfg.model = $('apiModel').value.trim();
+    apiCfg.key = $('apiKey').value.trim();
+    saveApi(apiCfg); updateModeTag();
+    $('apiBody').insertAdjacentHTML('beforeend', '<div class="hint" style="color:#059669">✅ 已保存</div>');
+  });
+  $('apiTest').addEventListener('click', function(){
+    var base = $('apiBase').value.trim().replace(/\/+$/,'');
+    var key = $('apiKey').value.trim();
+    var model = $('apiModel').value.trim() || 'deepseek-chat';
+    if(!key){ alert('请先填写 API Key'); return; }
+    $('apiTest').textContent = '⏳ 测试中…';
+    fetch(base + '/chat/completions', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key}, body:JSON.stringify({ model:model, messages:[{role:'user',content:'你好，请回复：连接成功'}], max_tokens:10 }) })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(){ $('apiTest').textContent = '✅ 连接成功'; $('apiTest').style.background='#d1fae5'; $('apiTest').style.color='#059669'; })
+      .catch(function(err){ $('apiTest').textContent = '❌ 连接失败'; $('apiTest').style.background='#fee2e2'; $('apiTest').style.color='#dc2626'; alert('连接失败：' + err.message); });
+  });
+}
+
+function updateModeTag(){
+  var tag = $('modeTag');
+  if(isApiOn()){ tag.textContent = '大模型已接入'; tag.classList.remove('off'); }
+  else { tag.textContent = '离线引擎'; tag.classList.add('off'); }
+}
+
+/* ================= 事件绑定 ================= */
+$('btnSend').addEventListener('click', function(){ sendText($('input').value); $('input').value=''; autoGrow($('input')); });
+$('input').addEventListener('keydown', function(e){
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ sendText(this.value); this.value=''; autoGrow(this); }
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendText(this.value); this.value=''; autoGrow(this); }
+});
+$('input').addEventListener('input', function(){ autoGrow(this); });
+
+$('btnCamera').addEventListener('click', function(){ $('fileInput').click(); });
+$('navPhoto').addEventListener('click', function(){ $('fileInput').click(); });
+$('fileInput').addEventListener('change', function(e){ if(e.target.files && e.target.files[0]) attachImage(e.target.files[0]); this.value=''; });
+
+$('btnMic').addEventListener('click', toggleRec);
+$('navVoice').addEventListener('click', toggleRec);
+$('navText').addEventListener('click', function(){ $('input').focus(); $('input').scrollIntoView({behavior:'smooth'}); });
+$('btnTextFocus').addEventListener('click', function(){ $('input').focus(); });
+$('btnQuiz').addEventListener('click', function(){ offerAndSend(); });
+$('navQuiz').addEventListener('click', function(){ offerAndSend(); });
+$('btnQuizTop').addEventListener('click', function(){ offerAndSend(); });
+$('btnMethodTop').addEventListener('click', function(){ showOverlay('ovMethod'); });
+$('navMethod').addEventListener('click', function(){ showOverlay('ovMethod'); });
+$('navMemory').addEventListener('click', function(){ renderMemory(); showOverlay('ovMemory'); });
+$('navTest').addEventListener('click', function(){ renderTest(); showOverlay('ovTest'); });
+$('navApi').addEventListener('click', function(){ renderApi(); showOverlay('ovApi'); });
+$('navClear').addEventListener('click', function(){
+  if(confirm('确定清空四哥记住的所有对话与学习记录吗？此操作不可恢复。')){
+    clearMemory(); updateModeTag();
+    alert('已清空记忆。四哥重新认识你，咱们重新开始。');
+  }
+});
+
+/* ================= 初始化 ================= */
+function init(){
+  $('methodBody').innerHTML = METHOD_HTML;
+  updateModeTag();
+  initSpeech();
+  var greeting = '同学们好，我是四哥，超格教育的一名言语讲师。\n\n以后咱们就是并肩作战的战友了：把题发我，我给你逐项拆；也可以点「🎲 随机出题」练手感，或点「📖 方法答疑」随时复习三步走和三把钥匙。\n\n你之前和我聊过的每一道题、每一个薄弱点，我都记着（点「🧠 记忆记录」可查看）。\n\n请相信努力从来不会白费，今日撒下的种子，正在你看不见的地方悄悄生根发芽。';
+  if(memory.messages.length === 0){
+    var typing = addTyping();
+    typewriter(typing.querySelector('.bubble'), greeting, 16, function(){
+      memory.messages.push({ role: 'assistant', text: greeting, time: new Date().toISOString() });
+      saveMemory();
+    });
+  } else {
+    addMessage('assistant', '（欢迎回来）我接着上次陪你练。今天想练中心理解还是逻辑填空？或者直接丢题过来。');
+  }
+  $('input').focus();
+}
+
+init();
+})();
+</script>
+</body>
+</html>
