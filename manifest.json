@@ -1,0 +1,21 @@
+{
+  "name": "四哥 · 言语智能助教",
+  "short_name": "四哥助教",
+  "description": "行测言语理解智能助教，拍照识题/语音/出题/记忆",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FDF2F7",
+  "theme_color": "#e14d84",
+  "icons": [
+    {
+      "src": "sige-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "sige-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
