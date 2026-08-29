@@ -178,7 +178,7 @@
     <div class="nav-title">功能导航</div>
     <nav class="nav">
       <button class="nav-btn" id="navPhoto" title="用手机相机或上传图片识别题目">
-        <span class="ico">📷</span><span class="lbl">拍照传题</span><span class="badge">OCR</span>
+        <span class="ico">📷</span><span class="lbl">拍照传题</span><span class="badge">识图</span>
       </button>
       <button class="nav-btn" id="navVoice" title="按住说话，自动转文字">
         <span class="ico">🎤</span><span class="lbl">语音输入</span><span class="badge">识别</span>
@@ -1071,59 +1071,81 @@ function apiChat(text, type){
   });
 }
 
-/* ================= 拍照传题 + OCR ================= */
-var tesseractLoading = false;
+/* ================= 拍照传题 + 视觉识别 ================= */
 function attachImage(file){
   if(!file) return;
   var reader = new FileReader();
   reader.onload = function(e){
-    var img = '<img src="' + e.target.result + '" alt="题目图片">';
+    var dataUrl = e.target.result;
+    var img = '<img src="' + dataUrl + '" alt="题目图片">';
     addMessage('user', img, { html:true });
     var hint = $('ocrHint');
-    hint.innerHTML = '🖼 图片已上传，四哥正在尝试 OCR 识别文字……（若识别失败请手动打字）';
-    runOCR(file, hint);
+    hint.innerHTML = '🖼 图片已上传，四哥正在由视觉模型识别题目内容……';
+    if(!isApiOn()){
+      hint.innerHTML = '📵 当前未启用 API，无法直接用视觉模型识别图片。请点击「✍️ 文字传题」手动输入题干与选项。';
+      return;
+    }
+    analyzeImageWithVision(dataUrl, hint);
   };
   reader.readAsDataURL(file);
 }
-function runOCR(file, hintEl){
-  if(typeof Tesseract === 'undefined'){
-    loadTesseract().then(function(){
-      recognize(file, hintEl);
-    }).catch(function(){
-      hintEl.innerHTML = '📵 离线无法加载 OCR，请点击「✍️ 文字传题」手动输入题干与选项。';
-    });
-    return;
-  }
-  recognize(file, hintEl);
-}
-function loadTesseract(){
-  return new Promise(function(resolve, reject){
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-    s.onload = function(){ resolve(); };
-    s.onerror = function(){ reject(new Error('tesseract load fail')); };
-    document.head.appendChild(s);
-    setTimeout(function(){ reject(new Error('timeout')); }, 25000);
+function analyzeImageWithVision(dataUrl, hintEl){
+  var model = apiCfg.model || 'deepseek-chat';
+  var body = {
+    model: model,
+    temperature: 0.2,
+    max_tokens: 1400,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: '请根据图片中的题目内容，直接识别并输出题干、选项和题目要求，保留原文语句，不要自行改写。若有不清晰处，请说明“无法辨认”。请仅返回纯文本，不要额外说明。' },
+        { type: 'image_url', image_url: { url: dataUrl } }
+      ]
+    }]
+  };
+
+  fetch((apiCfg.base||'').replace(/\/+$/, '') + '/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiCfg.key
+    },
+    body: JSON.stringify(body)
+  }).then(function(res){
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }).then(function(data){
+    var text = extractVisionText(data);
+    if(!text || text.length < 3){
+      hintEl.innerHTML = '⚠️ 视觉模型没有识别出足够内容，请手动输入题干。';
+      return;
+    }
+    var ta = $('input');
+    ta.value = normalizeVisionText(text);
+    ta.focus();
+    autoGrow(ta);
+    hintEl.innerHTML = '✅ 视觉模型已识别图片内容，文字已填入输入框，核对后发送。';
+  }).catch(function(err){
+    var msg = err && err.message ? err.message : '网络异常';
+    hintEl.innerHTML = '⚠️ 视觉模型识别失败（' + msg + '），请切换为支持图片识别的模型，或手动输入题干。';
   });
 }
-function recognize(file, hintEl){
-  var started = Date.now();
-  Tesseract.recognize(file, 'chi_sim+eng', { logger: function(m){ if(m.status==='recognizing text'){ hintEl.innerHTML = '🧠 识别中 ' + Math.round(m.progress*100) + '% ……'; } } })
-    .then(function(r){
-      var text = (r.data && r.data.text || '').trim();
-      if(text && text.length > 3){
-        hintEl.innerHTML = '✅ OCR 识别完成（' + Math.round((Date.now()-started)/1000) + 's）。文字已填入输入框，核对后发送。';
-        var ta = $('input');
-        ta.value = text.replace(/\s*\n\s*/g, '\n');
-        ta.focus();
-        autoGrow(ta);
-        // 预填但让用户确认，不自动发送
-      } else {
-        hintEl.innerHTML = '⚠️ 图片里没识别到足够文字，请手动输入题干。';
-      }
-    }).catch(function(err){
-      hintEl.innerHTML = '⚠️ OCR 失败（' + err.message + '），请手动输入题干。';
+function extractVisionText(data){
+  var choice = data && data.choices && data.choices[0];
+  var msg = choice && choice.message;
+  if(!msg) return '';
+  if(typeof msg.content === 'string') return msg.content.trim();
+  if(Array.isArray(msg.content)){
+    var textParts = [];
+    msg.content.forEach(function(part){
+      if(part && part.type === 'text' && part.text) textParts.push(part.text);
     });
+    return textParts.join('\n').trim();
+  }
+  return '';
+}
+function normalizeVisionText(text){
+  return (text || '').replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 function autoGrow(ta){ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight, 140) + 'px'; }
 
